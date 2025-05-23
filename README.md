@@ -99,8 +99,6 @@ dotnet restore
 3. **Configure a conexão com o banco no appsettings.json:**
 
 ```json
-Copiar
-Editar
 {
   "ConnectionStrings": {
     "OracleConnection": "User Id=SEU_USUARIO;Password=SUA_SENHA;Data Source=SEU_SERVIDOR"
