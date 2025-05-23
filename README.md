@@ -65,6 +65,13 @@ O projeto integra o Swagger para geração automática da documentação da API:
 
 ---
 
+🗂️ Estrutura do Projeto
+SafeYard.API: Projeto da API REST
+SafeYard.Data: Camada de acesso a dados com Entity Framework Core
+SafeYard.Models: Modelos de dados (Moto, Cliente, Patio)
+
+---
+
 ## 🚀 Como Executar
 
 ### Pré-requisitos
@@ -79,4 +86,38 @@ O projeto integra o Swagger para geração automática da documentação da API:
 
 ```bash
 git clone https://github.com/seu-usuario/SafeYard.git
+cd SafeYard 
+```
+
+
+2. **Restaure os pacotes:**
+
+```bash
+dotnet restore
+```
+
+3. **Configure a conexão com o banco no appsettings.json:**
+
+```json
+Copiar
+Editar
+{
+  "ConnectionStrings": {
+    "OracleConnection": "User Id=SEU_USUARIO;Password=SUA_SENHA;Data Source=SEU_SERVIDOR"
+  }
+}
+
+```
+
+4. **Aplique as migrations para criar as tabelas no banco:**
+
+```bash
+dotnet ef database update --project ./SafeYard.Data
+```
+
+5. **Execute a aplicação: **
+
+```bash
 cd SafeYard
+dotnet run
+```
