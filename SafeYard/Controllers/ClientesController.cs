@@ -49,8 +49,7 @@ public class ClientesController : ControllerBase
         if (cliente == null)
             return BadRequest("Dados inválidos!");
 
-        if (!Cliente.ValidarCpf(cliente.Cpf))
-            return BadRequest("CPF inválido!");
+        // Removida validação de CPF
 
         _context.Clientes.Add(cliente);
         await _context.SaveChangesAsync();
@@ -69,8 +68,7 @@ public class ClientesController : ControllerBase
         if (id != cliente.Id)
             return BadRequest("ID inválido!");
 
-        if (!Cliente.ValidarCpf(cliente.Cpf))
-            return BadRequest("CPF inválido!");
+        // Removida validação de CPF
 
         _context.Entry(cliente).State = EntityState.Modified;
         await _context.SaveChangesAsync();

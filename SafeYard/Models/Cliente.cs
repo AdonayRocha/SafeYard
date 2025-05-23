@@ -9,7 +9,7 @@ namespace SafeYard.Models
         public string Cpf { get; set; }
         public string Email { get; set; }
 
-        public static bool ValidarCpf(string cpf)
+        /* public static bool ValidarCpf(string cpf)
         {
             if (string.IsNullOrEmpty(cpf))
                 return false;
@@ -34,6 +34,6 @@ namespace SafeYard.Models
             int digito2 = (soma2 % 11) < 2 ? 0 : 11 - (soma2 % 11);
 
             return cpf[9] - '0' == digito1 && cpf[10] - '0' == digito2;
-        }
+        } */ 
     }
 }
