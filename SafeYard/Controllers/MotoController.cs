@@ -1,104 +1,128 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SafeYard.Data;
-
 using SafeYard.Models;
+using SafeYard.Models.Common;
+using SafeYard.Services;
 
-/// <summary>
-/// Controller responsável pelo gerenciamento de motos na API.
-/// Permite criar, consultar, atualizar e excluir registros.
-/// </summary>
-[Route("api/motos")]
-[ApiController]
-public class MotoController : ControllerBase
+namespace SafeYard.Controllers
 {
-    private readonly ApplicationDbContext _context;
-
-    public MotoController(ApplicationDbContext context)
+    [Route("api/motos")]
+    [ApiController]
+    public class MotoController : ControllerBase
     {
-        _context = context;
-    }
+        private readonly ApplicationDbContext _context;
+        private HateoasLinkBuilder LinkBuilder => new HateoasLinkBuilder(Url);
 
-    /// <summary>
-    /// Retorna todas as motos cadastradas, filtrando por marca caso necessário.
-    /// </summary>
-    /// <param name="marca">Nome da marca da moto (QueryParam)</param>
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<Moto>>> GetMotos([FromQuery] string? marca)
-    {
-        var motos = string.IsNullOrEmpty(marca)
-            ? await _context.Motos.ToListAsync()
-            : await _context.Motos.Where(m => m.Marca == marca).ToListAsync();
+        public MotoController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
 
-        return motos.Count > 0 ? Ok(motos) : NoContent();
-    }
+        /// <summary>Retorna todas as motos com paginação e filtro opcional por marca.</summary>
+        /// <param name="marca">Marca a filtrar (opcional)</param>
+        /// <param name="paging">Parâmetros de paginação (page, pageSize)</param>
+        [HttpGet(Name = "GetMotos")]
+        [ProducesResponseType(typeof(PagedResult<Resource<Moto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<ActionResult<PagedResult<Resource<Moto>>>> GetMotos([FromQuery] string? marca, [FromQuery] PagingParameters paging)
+        {
+            var query = _context.Motos.AsNoTracking().AsQueryable();
 
-    /// <summary>
-    /// Retorna uma moto específica pelo ID.
-    /// </summary>
-    /// <param name="id">ID da moto</param>
-    [HttpGet("{id}")]
-    public async Task<ActionResult<Moto>> GetMoto(int id)
-    {
-        var moto = await _context.Motos.FindAsync(id);
-        return moto != null ? Ok(moto) : NotFound();
-    }
+            if (!string.IsNullOrWhiteSpace(marca))
+                query = query.Where(m => m.Marca == marca);
 
-    /// <summary>
-    /// Retorna todas as motos acima de um ano mínimo especificado.
-    /// </summary>
-    /// <param name="minAno">Ano mínimo da moto (QueryParam)</param>
-    [HttpGet("ano")]
-    public async Task<ActionResult<IEnumerable<Moto>>> GetMotosPorAno([FromQuery] int? minAno)
-    {
-        var motos = minAno.HasValue
-            ? await _context.Motos.Where(m => m.Ano >= minAno.Value).ToListAsync()
-            : await _context.Motos.ToListAsync();
+            var total = await query.CountAsync();
+            if (total == 0)
+                return NoContent();
 
-        return motos.Count > 0 ? Ok(motos) : NoContent();
-    }
+            var items = await query
+                .OrderBy(m => m.Id)
+                .Skip((paging.Page - 1) * paging.PageSize)
+                .Take(paging.PageSize)
+                .ToListAsync();
 
-    /// <summary>
-    /// Cadastra uma nova moto na base de dados.
-    /// </summary>
-    [HttpPost]
-    public async Task<ActionResult<Moto>> PostMoto([FromBody] Moto moto)
-    {
-        if (moto == null || string.IsNullOrEmpty(moto.Modelo))
-            return BadRequest("Dados inválidos!");
+            var resources = items.Select(m =>
+            {
+                var res = new Resource<Moto>(m);
+                res.Links.AddRange(LinkBuilder.ForMoto(m.Id));
+                return res;
+            }).ToList();
 
-        _context.Motos.Add(moto);
-        await _context.SaveChangesAsync();
+            var result = new PagedResult<Resource<Moto>>(resources, total, paging.Page, paging.PageSize);
+            result.Links.AddRange(LinkBuilder.ForCollection("GetMotos", result.Page, result.PageSize, result.TotalPages));
+            return Ok(result);
+        }
 
-        return CreatedAtAction(nameof(GetMoto), new { id = moto.Id }, moto);
-    }
+        /// <summary>Retorna uma moto específica pelo ID.</summary>
+        [HttpGet("{id}", Name = "GetMotoById")]
+        [ProducesResponseType(typeof(Moto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<Resource<Moto>>> GetMoto(int id)
+        {
+            var moto = await _context.Motos.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
+            if (moto == null) return NotFound();
 
-    /// <summary>
-    /// Atualiza um registro de moto.
-    /// </summary>
-    [HttpPut("{id}")]
-    public async Task<IActionResult> PutMoto(int id, [FromBody] Moto moto)
-    {
-        if (id != moto.Id) return BadRequest("ID inválido!");
+            var res = new Resource<Moto>(moto);
+            res.Links.AddRange(LinkBuilder.ForMoto(id));
+            return Ok(res);
+        }
 
-        _context.Entry(moto).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        /// <summary>Retorna motos com ano maior ou igual ao parâmetro informado.</summary>
+        [HttpGet("ano", Name = "GetMotosPorAno")]
+        [ProducesResponseType(typeof(IEnumerable<Moto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<ActionResult<IEnumerable<Moto>>> GetMotosPorAno([FromQuery] int? minAno)
+        {
+            var motos = minAno.HasValue
+                ? await _context.Motos.AsNoTracking().Where(m => m.Ano >= minAno.Value).ToListAsync()
+                : await _context.Motos.AsNoTracking().ToListAsync();
 
-        return NoContent();
-    }
+            return motos.Count > 0 ? Ok(motos) : NoContent();
+        }
 
-    /// <summary>
-    /// Exclui um registro de moto.
-    /// </summary>
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteMoto(int id)
-    {
-        var moto = await _context.Motos.FindAsync(id);
-        if (moto == null) return NotFound();
+        /// <summary>Cadastra uma nova moto.</summary>
+        [HttpPost(Name = "CreateMoto")]
+        [ProducesResponseType(typeof(Moto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<Moto>> PostMoto([FromBody] Moto moto)
+        {
+            if (moto == null || string.IsNullOrWhiteSpace(moto.Modelo))
+                return BadRequest("Dados inválidos!");
 
-        _context.Motos.Remove(moto);
-        await _context.SaveChangesAsync();
+            _context.Motos.Add(moto);
+            await _context.SaveChangesAsync();
 
-        return NoContent();
+            return CreatedAtRoute("GetMotoById", new { id = moto.Id }, moto);
+        }
+
+        /// <summary>Atualiza uma moto.</summary>
+        [HttpPut("{id}", Name = "UpdateMoto")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> PutMoto(int id, [FromBody] Moto moto)
+        {
+            if (id != moto.Id) return BadRequest("ID inválido!");
+
+            _context.Entry(moto).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        /// <summary>Exclui uma moto.</summary>
+        [HttpDelete("{id}", Name = "DeleteMoto")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteMoto(int id)
+        {
+            var moto = await _context.Motos.FindAsync(id);
+            if (moto == null) return NotFound();
+
+            _context.Motos.Remove(moto);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
     }
 }
