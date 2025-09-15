@@ -4,8 +4,9 @@ using SafeYard.Data;
 using SafeYard.Models;
 using SafeYard.Models.Common;
 using SafeYard.Services;
+using Swashbuckle.AspNetCore.Filters;
 
-namespace SafeYard.Controllers
+namespace SafeYard.Controllers  
 {
     [Route("api/motos")]
     [ApiController]
@@ -83,6 +84,7 @@ namespace SafeYard.Controllers
 
         /// <summary>Cadastra uma nova moto.</summary>
         [HttpPost(Name = "CreateMoto")]
+        [SwaggerRequestExample(typeof(Moto), typeof(SafeYard.Models.Examples.MotoRequestExample))]
         [ProducesResponseType(typeof(Moto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<Moto>> PostMoto([FromBody] Moto moto)

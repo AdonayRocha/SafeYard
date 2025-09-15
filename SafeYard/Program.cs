@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SafeYard.Data;
+using Swashbuckle.AspNetCore.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +13,12 @@ builder.Services.AddControllers();
 
 // Configuração do Swagger para documentação da API
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.ExampleFilters();
+});
+
+builder.Services.AddSwaggerExamplesFromAssemblyOf<SafeYard.Models.Examples.MotoRequestExample>();
 
 var app = builder.Build();
 

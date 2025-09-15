@@ -4,6 +4,7 @@ using SafeYard.Data;
 using SafeYard.Models;
 using SafeYard.Models.Common;
 using SafeYard.Services;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace SafeYard.Controllers
 {
@@ -62,6 +63,7 @@ namespace SafeYard.Controllers
 
         /// <summary>Cria um novo pátio.</summary>
         [HttpPost(Name = "CreatePatio")]
+        [SwaggerRequestExample(typeof(Patio), typeof(SafeYard.Models.Examples.PatioRequestExample))]
         [ProducesResponseType(typeof(Patio), StatusCodes.Status201Created)]
         public async Task<ActionResult<Patio>> PostPatio([FromBody] Patio patio)
         {

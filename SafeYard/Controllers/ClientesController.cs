@@ -4,6 +4,7 @@ using SafeYard.Data;
 using SafeYard.Models;
 using SafeYard.Models.Common;
 using SafeYard.Services;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace SafeYard.Controllers
 {
@@ -63,6 +64,7 @@ namespace SafeYard.Controllers
 
         /// <summary>Cria um novo cliente.</summary>
         [HttpPost(Name = "CreateCliente")]
+        [SwaggerRequestExample(typeof(Cliente), typeof(SafeYard.Models.Examples.ClienteRequestExample))]
         [ProducesResponseType(typeof(Cliente), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<Cliente>> PostCliente([FromBody] Cliente cliente)
