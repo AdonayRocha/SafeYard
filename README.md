@@ -71,6 +71,13 @@ SafeYard.Data: Camada de acesso a dados com Entity Framework Core
 SafeYard.Models: Modelos de dados (Moto, Cliente, Patio)
 
 ---
+## Equipe
+
+Adonay Rodrigues da Rocha
+Pedro Henrique Martins Dos Reis
+Thamires Ribeiro Cruz
+
+---
 
 ## 🚀 Como Executar
 
