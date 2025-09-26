@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configuração do banco de dados Oracle
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseOracle(builder.Configuration.GetConnectionString("OracleDb")));
+    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
 
 // Adicionando serviços ao contêiner
 builder.Services.AddControllers();
