@@ -6,6 +6,7 @@ using SafeYard;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Mvc;
+using SafeYard.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,7 +34,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.ExampleFilters();
-    // Adiciona definição de segurança para API Key
     c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
     {
         Description = "API Key via header X-API-KEY",
@@ -58,8 +58,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 
     c.OperationFilter<SecurityRequirementsOperationFilter>();
-    // Registrar o OperationFilter que exibe upload no Swagger
-    c.OperationFilter<SafeYard.Swagger.FileUploadOperationFilter>();
+    c.DocumentFilter<HealthCheckDocumentFilter>();
 });
 
 builder.Services.AddSwaggerExamplesFromAssemblyOf<SafeYard.Models.Examples.MotoRequestExample>();
@@ -84,28 +83,5 @@ app.UseMiddleware<ApiKeyMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
-
-// Endpoint Minimal API para predição via Roboflow (lê o form manualmente para evitar antiforgery binding)
-app.MapPost("/api/v1/motos/predict", async (HttpRequest request, RoboflowService roboflowService) =>
-{
-    if (!request.HasFormContentType)
-        return Results.BadRequest("Envie uma imagem em multipart/form-data (campo 'image').");
-
-    var form = await request.ReadFormAsync();
-    var file = form.Files["image"] ?? form.Files.FirstOrDefault();
-    if (file == null)
-        return Results.BadRequest("Arquivo não encontrado.");
-
-    using var ms = new System.IO.MemoryStream();
-    await file.CopyToAsync(ms);
-    var imageBytes = ms.ToArray();
-
-    int motos = await roboflowService.DetectMotos(imageBytes);
-
-    return Results.Ok(new { motosDetectadas = motos });
-})
-.WithName("DetectMotos")
-.Produces(200)
-.Produces(400);
 
 app.Run();

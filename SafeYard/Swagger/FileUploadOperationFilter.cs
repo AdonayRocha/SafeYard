@@ -10,10 +10,12 @@ namespace SafeYard.Swagger
     {
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
-          
-            var isPredictEndpoint = context.ApiDescription.RelativePath?.Equals("api/v1/motos/predict", StringComparison.OrdinalIgnoreCase) ?? false;
+            var isPredictAction = context.ApiDescription.ActionDescriptor.RouteValues.TryGetValue("controller", out var controller)
+                && controller.Equals("Predict", StringComparison.OrdinalIgnoreCase)
+                && context.ApiDescription.ActionDescriptor.RouteValues.TryGetValue("action", out var action)
+                && action.Equals("Predict", StringComparison.OrdinalIgnoreCase);
 
-            if (!isPredictEndpoint)
+            if (!isPredictAction)
                 return;
 
             operation.RequestBody = new OpenApiRequestBody
