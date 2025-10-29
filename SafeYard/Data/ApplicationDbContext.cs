@@ -10,6 +10,6 @@ namespace SafeYard.Data
         public DbSet<Moto> Motos { get; set; }
         public DbSet<Patio> Patios { get; set; }
         public DbSet<Cliente> Clientes { get; set; }
-
+        public DbSet<TB_ECHO_MOTORCYCLE> TB_ECHO_MOTORCYCLE { get; set; }
     }
 }

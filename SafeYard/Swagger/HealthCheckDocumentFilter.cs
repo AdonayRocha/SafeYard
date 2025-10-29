@@ -17,6 +17,7 @@ namespace SafeYard.Swagger
                         {
                             Summary = "Health Check",
                             Description = "Verifica se a API está saudável.",
+                            Tags = new List<OpenApiTag> { new OpenApiTag { Name = "HealthSystem" } },
                             Responses = new OpenApiResponses
                             {
                                 ["200"] = new OpenApiResponse { Description = "API saudável" }
