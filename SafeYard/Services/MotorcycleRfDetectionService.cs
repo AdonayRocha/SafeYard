@@ -1,17 +1,18 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using SafeYard.Services;
 
 namespace SafeYard.Services
 {
-    public class RoboflowService
+    public class MotorcycleRfDetectionService
     {
         private readonly string _apiKey;
         private readonly string _datasetName;
         private readonly string _datasetVersion;
 
-        public RoboflowService(IConfiguration config)
+        public MotorcycleRfDetectionService(IConfiguration config)
         {
             _apiKey = config["Roboflow:ApiKey"];
             _datasetName = config["Roboflow:DatasetName"];

@@ -1,38 +1,40 @@
 using Microsoft.AspNetCore.Mvc;
-using SafeYard.Services;
 using SafeYard.Models;
+using SafeYard.Services;
 
 namespace SafeYard.Controllers
 {
     [ApiController]
-    [Route("api/v1/motos")]
+    [Route("api/predict")]
     public class PredictController : ControllerBase
     {
-        private readonly RoboflowService _roboflowService;
+        private readonly MotorcycleRfDetectionService _rfService;
 
-        public PredictController(RoboflowService roboflowService)
+        public PredictController(MotorcycleRfDetectionService rfService)
         {
-            _roboflowService = roboflowService;
+            _rfService = rfService;
         }
 
         /// <summary>
-        /// Realiza a predição de motos a partir de uma imagem.
+        /// Detecta motos em uma imagem (Roboflow) e retorna a quantidade detectada.
         /// </summary>
-        [HttpPost("predict")]
-        [ProducesResponseType(typeof(object), 200)]
-        [ProducesResponseType(400)]
-        public async Task<IActionResult> Predict([FromForm] PredictImageUpload upload)
+        [HttpPost]
+        [ActionName("Predict")]
+        [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<int>> Predict([FromForm] PredictImageUpload upload)
         {
-            if (upload?.Image == null)
-                return BadRequest("Arquivo não encontrado.");
+            if (upload?.Image == null || upload.Image.Length == 0)
+                return BadRequest("Imagem não enviada.");
 
             using var ms = new MemoryStream();
             await upload.Image.CopyToAsync(ms);
-            var imageBytes = ms.ToArray();
 
-            int motos = await _roboflowService.DetectMotos(imageBytes);
+            var qtd = await _rfService.DetectMotos(ms.ToArray());
+            if (qtd < 0)
+                return BadRequest("Falha ao processar a imagem.");
 
-            return Ok(new { motosDetectadas = motos });
+            return Ok(qtd);
         }
     }
 }

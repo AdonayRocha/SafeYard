@@ -5,8 +5,8 @@ using SafeYard.Models;
 
 namespace SafeYard.Controllers
 {
-    [Route("api/echomotorcycles")]
     [ApiController]
+    [Route("api/echo-motorcycles")]
     public class EchoMotorcycleController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -17,17 +17,21 @@ namespace SafeYard.Controllers
         }
 
         /// <summary>
-        /// Retorna todos os registros da tabela TB_ECHO_MOTORCYCLE.
+        /// Retorna os registros de EchoMotorcycle (últimos 100 por data/hora).
         /// </summary>
-        /// <returns>Lista de EchoMotorcycle</returns>
-        [HttpGet(Name = "GetEchoMotorcycles")]
+        [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<EchoMotorcycle>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public async Task<ActionResult<IEnumerable<EchoMotorcycle>>> GetEchoMotorcycles()
+        public async Task<ActionResult<IEnumerable<EchoMotorcycle>>> Get()
         {
-            var items = await _context.TB_ECHO_MOTORCYCLE.ToListAsync();
-            if (items.Count == 0) return NoContent();
-            return Ok(items);
+            var items = await _context.TB_ECHO_MOTORCYCLE
+                .AsNoTracking()
+                .OrderByDescending(e => e.Data)
+                .ThenByDescending(e => e.Hora)
+                .Take(100)
+                .ToListAsync();
+
+            return items.Count > 0 ? Ok(items) : NoContent();
         }
     }
 }

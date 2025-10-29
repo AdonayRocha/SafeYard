@@ -63,8 +63,9 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddSwaggerExamplesFromAssemblyOf<SafeYard.Models.Examples.MotoRequestExample>();
 
-// DI para serviço Roboflow
-builder.Services.AddScoped<RoboflowService>();
+// DI
+builder.Services.AddScoped<MotorcycleRfDetectionService>();
+builder.Services.AddScoped<MotorcycleMlPredictionService>(); 
 
 var app = builder.Build();
 
