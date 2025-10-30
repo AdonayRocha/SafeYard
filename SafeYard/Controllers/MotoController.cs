@@ -20,6 +20,30 @@ namespace SafeYard.Controllers
             _context = context;
         }
 
+        /// <summary>Retorna todas as motos sem paginação.</summary>
+        [HttpGet("all", Name = "GetAllMotos")]
+        [ProducesResponseType(typeof(IEnumerable<Resource<Moto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<ActionResult<IEnumerable<Resource<Moto>>>> GetAllMotos()
+        {
+            var items = await _context.Motos
+                .AsNoTracking()
+                .OrderBy(m => m.Id)
+                .ToListAsync();
+
+            if (items.Count == 0)
+                return NoContent();
+
+            var resources = items.Select(m =>
+            {
+                var res = new Resource<Moto>(m);
+                res.Links.AddRange(LinkBuilder.ForMoto(m.Id));
+                return res;
+            }).ToList();
+
+            return Ok(resources);
+        }
+
         /// <summary>Retorna todas as motos com paginação e filtro opcional por marca.</summary>
         /// <param name="marca">Marca a filtrar (opcional)</param>
         /// <param name="paging">Parâmetros de paginação (page, pageSize)</param>
