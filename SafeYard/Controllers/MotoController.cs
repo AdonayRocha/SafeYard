@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SafeYard.Data;
+using Microsoft.Extensions.DependencyInjection;
 using SafeYard.Models;
 using SafeYard.Models.Common;
 using SafeYard.Services;
+using SafeYard.Services.Interfaces;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace SafeYard.Controllers  
@@ -12,12 +12,19 @@ namespace SafeYard.Controllers
     [ApiController]
     public class MotoController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IMotoService _service;
         private HateoasLinkBuilder LinkBuilder => new HateoasLinkBuilder(Url);
 
-        public MotoController(ApplicationDbContext context)
+        [ActivatorUtilitiesConstructor]
+        public MotoController(IMotoService service)
         {
-            _context = context;
+            _service = service;
+        }
+
+        // Construtor para cenários de teste unitário que instanciam com DbContext
+        public MotoController(SafeYard.Data.ApplicationDbContext context)
+        {
+            _service = new MotoService(context);
         }
 
         /// <summary>Retorna todas as motos sem paginação.</summary>
@@ -26,13 +33,8 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<ActionResult<IEnumerable<Resource<Moto>>>> GetAllMotos()
         {
-            var items = await _context.Motos
-                .AsNoTracking()
-                .OrderBy(m => m.Id)
-                .ToListAsync();
-
-            if (items.Count == 0)
-                return NoContent();
+            var items = await _service.GetAllAsync();
+            if (items.Count == 0) return NoContent();
 
             var resources = items.Select(m =>
             {
@@ -52,20 +54,8 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<ActionResult<PagedResult<Resource<Moto>>>> GetMotos([FromQuery] string? marca, [FromQuery] PagingParameters paging)
         {
-            var query = _context.Motos.AsNoTracking().AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(marca))
-                query = query.Where(m => m.Marca == marca);
-
-            var total = await query.CountAsync();
-            if (total == 0)
-                return NoContent();
-
-            var items = await query
-                .OrderBy(m => m.Id)
-                .Skip((paging.Page - 1) * paging.PageSize)
-                .Take(paging.PageSize)
-                .ToListAsync();
+            var (items, total) = await _service.GetAsync(marca, paging);
+            if (total == 0) return NoContent();
 
             var resources = items.Select(m =>
             {
@@ -85,7 +75,7 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Resource<Moto>>> GetMoto(int id)
         {
-            var moto = await _context.Motos.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
+            var moto = await _service.GetByIdAsync(id);
             if (moto == null) return NotFound();
 
             var res = new Resource<Moto>(moto);
@@ -99,10 +89,7 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<ActionResult<IEnumerable<Moto>>> GetMotosPorAno([FromQuery] int? minAno)
         {
-            var motos = minAno.HasValue
-                ? await _context.Motos.AsNoTracking().Where(m => m.Ano >= minAno.Value).ToListAsync()
-                : await _context.Motos.AsNoTracking().ToListAsync();
-
+            var motos = await _service.GetByAnoAsync(minAno);
             return motos.Count > 0 ? Ok(motos) : NoContent();
         }
 
@@ -116,22 +103,21 @@ namespace SafeYard.Controllers
             if (moto == null || string.IsNullOrWhiteSpace(moto.Modelo))
                 return BadRequest("Dados inválidos!");
 
-            _context.Motos.Add(moto);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtRoute("GetMotoById", new { id = moto.Id }, moto);
+            var created = await _service.CreateAsync(moto);
+            return CreatedAtRoute("GetMotoById", new { id = created.Id }, created);
         }
 
         /// <summary>Atualiza uma moto.</summary>
         [HttpPut("{id}", Name = "UpdateMoto")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PutMoto(int id, [FromBody] Moto moto)
         {
             if (id != moto.Id) return BadRequest("ID inválido!");
 
-            _context.Entry(moto).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            var ok = await _service.UpdateAsync(moto);
+            if (!ok) return NotFound();
 
             return NoContent();
         }
@@ -142,11 +128,8 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteMoto(int id)
         {
-            var moto = await _context.Motos.FindAsync(id);
-            if (moto == null) return NotFound();
-
-            _context.Motos.Remove(moto);
-            await _context.SaveChangesAsync();
+            var ok = await _service.DeleteAsync(id);
+            if (!ok) return NotFound();
 
             return NoContent();
         }

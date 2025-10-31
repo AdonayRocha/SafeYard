@@ -1,7 +1,10 @@
+using System.Reflection;
+using System.IO;
 using Microsoft.EntityFrameworkCore;
 using SafeYard.Data;
 using Swashbuckle.AspNetCore.Filters;
 using SafeYard.Services;
+using SafeYard.Services.Interfaces;
 using SafeYard;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.OpenApi.Models;
@@ -53,12 +56,19 @@ builder.Services.AddSwaggerGen(c =>
                     Id = "ApiKey"
                 }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 
     c.OperationFilter<SecurityRequirementsOperationFilter>();
     c.DocumentFilter<HealthCheckDocumentFilter>();
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+    }
 });
 
 builder.Services.AddSwaggerExamplesFromAssemblyOf<SafeYard.Models.Examples.MotoRequestExample>();
@@ -66,6 +76,9 @@ builder.Services.AddSwaggerExamplesFromAssemblyOf<SafeYard.Models.Examples.MotoR
 // DI
 builder.Services.AddScoped<MotorcycleRfDetectionService>();
 builder.Services.AddScoped<MotorcycleMlPredictionService>(); 
+builder.Services.AddScoped<IMotoService, MotoService>();
+builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IPatioService, PatioService>();
 
 var app = builder.Build();
 

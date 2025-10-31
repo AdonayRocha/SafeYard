@@ -12,7 +12,6 @@ namespace SafeYard.Services
             _urlHelper = urlHelper;
         }
 
-        // Links por item
         public List<Link> ForMoto(int id)
         {
             return new List<Link>
@@ -43,7 +42,6 @@ namespace SafeYard.Services
             };
         }
 
-        // Links de coleção (paginação)
         public List<Link> ForCollection(string routeName, int page, int pageSize, int totalPages)
         {
             var links = new List<Link>

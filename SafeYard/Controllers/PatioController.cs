@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SafeYard.Data;
+using Microsoft.Extensions.DependencyInjection;
 using SafeYard.Models;
 using SafeYard.Models.Common;
 using SafeYard.Services;
+using SafeYard.Services.Interfaces;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace SafeYard.Controllers
@@ -12,12 +12,19 @@ namespace SafeYard.Controllers
     [ApiController]
     public class PatiosController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IPatioService _service;
         private HateoasLinkBuilder LinkBuilder => new HateoasLinkBuilder(Url);
 
-        public PatiosController(ApplicationDbContext context)
+        [ActivatorUtilitiesConstructor]
+        public PatiosController(IPatioService service)
         {
-            _context = context;
+            _service = service;
+        }
+
+        // Construtor para cenários de teste unitário que instanciam com DbContext
+        public PatiosController(SafeYard.Data.ApplicationDbContext context)
+        {
+            _service = new PatioService(context);
         }
 
         /// <summary>Retorna pátios com paginação.</summary>
@@ -26,14 +33,8 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<ActionResult<PagedResult<Resource<Patio>>>> GetPatios([FromQuery] PagingParameters paging)
         {
-            var query = _context.Patios.AsNoTracking().OrderBy(p => p.Id);
-            var total = await query.CountAsync();
+            var (items, total) = await _service.GetAsync(paging);
             if (total == 0) return NoContent();
-
-            var items = await query
-                .Skip((paging.Page - 1) * paging.PageSize)
-                .Take(paging.PageSize)
-                .ToListAsync();
 
             var resources = items.Select(p =>
             {
@@ -53,7 +54,7 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Resource<Patio>>> GetPatio(int id)
         {
-            var patio = await _context.Patios.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+            var patio = await _service.GetByIdAsync(id);
             if (patio == null) return NotFound();
 
             var res = new Resource<Patio>(patio);
@@ -67,21 +68,22 @@ namespace SafeYard.Controllers
         [ProducesResponseType(typeof(Patio), StatusCodes.Status201Created)]
         public async Task<ActionResult<Patio>> PostPatio([FromBody] Patio patio)
         {
-            _context.Patios.Add(patio);
-            await _context.SaveChangesAsync();
-            return CreatedAtRoute("GetPatioById", new { id = patio.Id }, patio);
+            var created = await _service.CreateAsync(patio);
+            return CreatedAtRoute("GetPatioById", new { id = created.Id }, created);
         }
 
         /// <summary>Atualiza um pátio.</summary>
         [HttpPut("{id}", Name = "UpdatePatio")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PutPatio(int id, [FromBody] Patio patio)
         {
             if (id != patio.Id) return BadRequest("ID inválido!");
 
-            _context.Entry(patio).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            var ok = await _service.UpdateAsync(patio);
+            if (!ok) return NotFound();
+
             return NoContent();
         }
 
@@ -91,11 +93,9 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeletePatio(int id)
         {
-            var patio = await _context.Patios.FindAsync(id);
-            if (patio == null) return NotFound();
+            var ok = await _service.DeleteAsync(id);
+            if (!ok) return NotFound();
 
-            _context.Patios.Remove(patio);
-            await _context.SaveChangesAsync();
             return NoContent();
         }
     }

@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SafeYard.Data;
+using Microsoft.Extensions.DependencyInjection;
 using SafeYard.Models;
 using SafeYard.Models.Common;
 using SafeYard.Services;
+using SafeYard.Services.Interfaces;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace SafeYard.Controllers
@@ -12,12 +12,18 @@ namespace SafeYard.Controllers
     [ApiController]
     public class ClientesController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IClienteService _service;
         private HateoasLinkBuilder LinkBuilder => new HateoasLinkBuilder(Url);
 
-        public ClientesController(ApplicationDbContext context)
+        [ActivatorUtilitiesConstructor]
+        public ClientesController(IClienteService service)
         {
-            _context = context;
+            _service = service;
+        }
+
+        public ClientesController(SafeYard.Data.ApplicationDbContext context)
+        {
+            _service = new ClienteService(context);
         }
 
         /// <summary>Retorna todos os clientes com paginação.</summary>
@@ -26,15 +32,8 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<ActionResult<PagedResult<Resource<Cliente>>>> GetClientes([FromQuery] PagingParameters paging)
         {
-            var query = _context.Clientes.AsNoTracking().OrderBy(c => c.Id);
-            var total = await query.CountAsync();
-
+            var (items, total) = await _service.GetAsync(paging);
             if (total == 0) return NoContent();
-
-            var items = await query
-                .Skip((paging.Page - 1) * paging.PageSize)
-                .Take(paging.PageSize)
-                .ToListAsync();
 
             var resources = items.Select(c =>
             {
@@ -54,7 +53,7 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Resource<Cliente>>> GetCliente(int id)
         {
-            var cliente = await _context.Clientes.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
+            var cliente = await _service.GetByIdAsync(id);
             if (cliente == null) return NotFound();
 
             var res = new Resource<Cliente>(cliente);
@@ -71,22 +70,21 @@ namespace SafeYard.Controllers
         {
             if (cliente == null) return BadRequest("Dados inválidos!");
 
-            _context.Clientes.Add(cliente);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtRoute("GetClienteById", new { id = cliente.Id }, cliente);
+            var created = await _service.CreateAsync(cliente);
+            return CreatedAtRoute("GetClienteById", new { id = created.Id }, created);
         }
 
         /// <summary>Atualiza um cliente.</summary>
         [HttpPut("{id}", Name = "UpdateCliente")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PutCliente(int id, [FromBody] Cliente cliente)
         {
             if (id != cliente.Id) return BadRequest("ID inválido!");
 
-            _context.Entry(cliente).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            var ok = await _service.UpdateAsync(cliente);
+            if (!ok) return NotFound();
 
             return NoContent();
         }
@@ -97,11 +95,8 @@ namespace SafeYard.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteCliente(int id)
         {
-            var cliente = await _context.Clientes.FindAsync(id);
-            if (cliente == null) return NotFound();
-
-            _context.Clientes.Remove(cliente);
-            await _context.SaveChangesAsync();
+            var ok = await _service.DeleteAsync(id);
+            if (!ok) return NotFound();
 
             return NoContent();
         }
