@@ -208,5 +208,4 @@ SafeYard/
 
 - As entidades **Moto**, **Cliente** e **Pátio** devem possuir **propriedades de navegação** e **chaves estrangeiras configuradas**.  
 - Verifique se há **migrations válidas** e que o projeto **compila corretamente**.  
-- O README contém todas as instruções para execução e testes, inclusive as credenciais de avaliação (`admin` / `admin`).
-- Via SWAGGER a credencial é (`admin`)
+- O README contém todas as instruções para execução e testes, inclusive as credenciais de avaliação (`admin` / `admin`).  
