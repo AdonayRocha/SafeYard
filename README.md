@@ -7,7 +7,7 @@ O **SafeYard** permite o registro de motos, proprietários e pátios, oferecendo
 
 ## 💡 Visão do Domínio — Por que este projeto existe
 
-Empresas e órgãos públicos que administram **pátios de motocicletas** (como estacionamentos, concessionárias ou áreas de apreensão) enfrentam desafios de controle:  
+Para administração de  **pátios de motocicletas** (como estacionamentos ou concessionárias) que enfrentam desafios de controle:  
 - Perda ou duplicação de registros;  
 - Falta de rastreabilidade de quem é o proprietário;  
 - Dificuldade para saber onde cada moto está alocada.
@@ -129,15 +129,33 @@ Para fins de **avaliação e testes locais**, use as credenciais padrão:
 
 ---
 
-## 🧪 Testes
+## 🧪 Testes Automatizados (`dotnet test`)
 
-Para executar os testes automatizados da solução:
+O projeto **SafeYard.Tests** contém testes de unidade e integração escritos com **xUnit**.  
+Para executá-los, basta rodar na raiz da solução:
 
 ```bash
 dotnet test
 ```
 
-Inclui testes unitários de validações e, futuramente, testes de integração entre camadas.
+Durante a execução, o .NET:
+
+- Compila todos os projetos de teste.
+- Localiza métodos marcados com `[Fact]` e `[Theory]`.
+- Executa os testes automaticamente, gerando relatórios de sucesso/falha.
+- Ignora os testes com o atributo `[Fact(Skip = "motivo")]`.
+
+### 🧩 Testes Atuais no Projeto
+
+Atualmente, o repositório inclui os seguintes testes:
+
+| Classe | Método | Tipo | Descrição |
+|--------|---------|------|-----------|
+| `ApiKeyMiddlewareTests` | `InvokeAsync_ApiKeyInvalida_Retorna401` | Unidade | Verifica se o middleware retorna **401 Unauthorized** quando a API Key é inválida. |
+| `MotoControllerTests` | `PostMoto_ModeloVazio_RetornaBadRequest` | Unidade | Garante que o endpoint `/motos` retorna **400 Bad Request** quando o modelo é inválido. |
+| `ClientesControllerTests` | `DeleteCliente_ClienteNaoExiste_RetornaNotFound` | Unidade | Testa o comportamento ao tentar excluir um cliente inexistente (**404 Not Found**). |
+| `HealthCheckIntegrationTests` | `HealthEndpoint_Retorna200` | Integração | Sobe uma instância da API via `WebApplicationFactory` e verifica se `/health` responde **200 OK**. |
+| `UnitTest1` | `Test1` | Unidade | Exemplo genérico de teste base para o setup inicial. |
 
 ---
 
@@ -173,8 +191,6 @@ dotnet run --project ./SafeYard.API
 
 Abra o navegador em **http://localhost:{porta}/swagger** para acessar a documentação.
 
-> Dica: utilize variáveis de ambiente ou `dotnet user-secrets` para proteger credenciais sensíveis.
-
 ---
 
 ## 🧱 Estrutura Esperada do Repositório
@@ -185,8 +201,8 @@ SafeYard/
 ├── src/
 │   ├── SafeYard.API/
 │   ├── SafeYard.Data/
-│   ├── SafeYard.Models/      # ou Domain
-│   └── SafeYard.Application/ # opcional
+│   ├── SafeYard.Models/     
+│   └── SafeYard.Application/ 
 └── tests/
     ├── SafeYard.UnitTests/
     └── SafeYard.IntegrationTests/
@@ -206,4 +222,5 @@ SafeYard/
 
 - As entidades **Moto**, **Cliente** e **Pátio** devem possuir **propriedades de navegação** e **chaves estrangeiras configuradas**.  
 - Verifique se há **migrations válidas** e que o projeto **compila corretamente**.  
-- O README contém todas as instruções para execução e testes, inclusive as credenciais de avaliação (`admin` / `admin`).  
+- O README contém todas as instruções para execução e testes, inclusive as credenciais de avaliação (`admin` / `admin`).
+- Para testes via Swagger utilize (`admin`)
