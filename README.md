@@ -127,8 +127,6 @@ Para fins de **avaliação e testes locais**, use as credenciais padrão:
 - **Usuário:** `admin`  
 - **Senha:** `admin`
 
-> ⚠️ Em produção, substitua por credenciais seguras.  
-
 ---
 
 ## 🧪 Testes
