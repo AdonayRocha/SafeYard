@@ -1,223 +1,212 @@
-# SafeYard API
+# 🏍️ SafeYard API
 
-API RESTful para gerenciamento de motos, clientes e pátios, desenvolvida em .NET 9, utilizando Entity Framework Core com banco de dados Oracle. O sistema foi pensado para atuar como solução de controle e segurança em um pátio de motocicletas, permitindo o cadastro, consulta e gerenciamento dos veículos, seus proprietários e os pátios onde estão armazenados.
-
----
-
-## Funcionalidades
-
-- CRUD de Motos  
-- CRUD de Clientes  
-- CRUD de Pátios  
-- Filtragem por QueryParams (ex: filtrar motos por marca ou ano mínimo)  
-- Paginação nos endpoints de listagem  
-- Integração com Banco de Dados Oracle via Entity Framework Core  
-- Documentação automática da API via OpenAPI (Swagger)  
+API RESTful para **controle e segurança de pátios de motocicletas**, desenvolvida em **.NET 9** com **Entity Framework Core** e **Oracle Database**.  
+O **SafeYard** permite o registro de motos, proprietários e pátios, oferecendo **endpoints CRUD, filtros, paginação e documentação via Swagger**.
 
 ---
 
-## Endpoints Principais
+## 💡 Visão do Domínio — Por que este projeto existe
+
+Empresas e órgãos públicos que administram **pátios de motocicletas** (como estacionamentos, concessionárias ou áreas de apreensão) enfrentam desafios de controle:  
+- Perda ou duplicação de registros;  
+- Falta de rastreabilidade de quem é o proprietário;  
+- Dificuldade para saber onde cada moto está alocada.
+
+O **SafeYard** foi criado para resolver esses problemas, fornecendo um sistema centralizado e seguro de **cadastro, alocação e consulta** de motos, clientes e pátios.  
+
+Com ele, é possível:  
+- Registrar e consultar **motos e proprietários**;  
+- Controlar a **localização atual** de cada moto (qual pátio está alocada);  
+- Monitorar **capacidade e ocupação dos pátios**;  
+- Expor dados via API para **integrações externas e painéis administrativos**.
+
+---
+
+## 🧩 Entidades Principais e Relacionamentos
+
+| Entidade | Atributos | Relacionamentos |
+|-----------|------------|----------------|
+| **Cliente** | `Id`, `Nome`, `CPF` (único), `Email`, `Telefone`, `DataCriacao` | 1 Cliente → N Motos |
+| **Moto** | `Id`, `Modelo`, `Marca`, `Ano`, `Placa` (única), `ClienteId` (FK), `PatioId` (FK, opcional), `DataCadastro` | Moto → 1 Cliente<br>Moto → 0..1 Pátio |
+| **Pátio** | `Id`, `Nome`, `Endereco`, `Capacidade`, `DataCriacao` | 1 Pátio → N Motos |
+
+> **Importante:**  
+> As entidades devem conter **propriedades de navegação** (ex.: `public Cliente Cliente { get; set; }`) e as **chaves estrangeiras configuradas** no `DbContext`.  
+> Isso garante o correto funcionamento dos relacionamentos no **Entity Framework Core**, permitindo o uso de `Include`, `cascade delete`, validações de integridade e queries otimizadas.
+
+---
+
+## ⚙️ Funcionalidades Principais
+
+- CRUD completo de **Motos**, **Clientes** e **Pátios**  
+- Filtros e paginação nas listagens (`marca`, `ano`, `clienteId`, etc.)  
+- Validações de unicidade (`CPF`, `Placa`) e obrigatoriedade de campos  
+- Documentação interativa via **Swagger / OpenAPI**  
+- Integração com **Oracle Database**  
+- Arquitetura em camadas (.API, .Data, .Models) com separação de responsabilidades  
+
+---
+
+## 🚀 Endpoints Principais
+
+**Prefixo base:** `/api`
 
 ### Motos
-
-- `GET /api/motos` — Lista motos (filtros e paginação: `?marca=Honda&page=1&pageSize=10`)
-- `GET /api/motos/{id}` — Retorna uma moto específica  
-- `GET /api/motos/ano?minAno=2015` — Retorna motos com ano maior ou igual a `minAno`  
-- `POST /api/motos` — Adiciona uma nova moto  
-- `PUT /api/motos/{id}` — Atualiza uma moto existente  
-- `DELETE /api/motos/{id}` — Remove uma moto  
+- `GET /api/motos` — Listagem com filtros e paginação  
+- `GET /api/motos/{id}`  
+- `POST /api/motos`  
+- `PUT /api/motos/{id}`  
+- `DELETE /api/motos/{id}`  
 
 ### Clientes
-
-- `GET /api/clientes` — Lista clientes (com paginação: `?page=1&pageSize=10`)
-- `GET /api/clientes/{id}` — Retorna um cliente específico  
-- `POST /api/clientes` — Cria um novo cliente  
-- `PUT /api/clientes/{id}` — Atualiza um cliente  
-- `DELETE /api/clientes/{id}` — Remove um cliente  
+- `GET /api/clientes`  
+- `GET /api/clientes/{id}`  
+- `POST /api/clientes`  
+- `PUT /api/clientes/{id}`  
+- `DELETE /api/clientes/{id}`  
 
 ### Pátios
+- `GET /api/patios`  
+- `GET /api/patios/{id}`  
+- `POST /api/patios`  
+- `PUT /api/patios/{id}`  
+- `DELETE /api/patios/{id}`  
 
-- `GET /api/patios` — Lista pátios (com paginação: `?page=1&pageSize=10`)
-- `GET /api/patios/{id}` — Retorna um pátio específico  
-- `POST /api/patios` — Adiciona um novo pátio  
-- `PUT /api/patios/{id}` — Atualiza um pátio  
-- `DELETE /api/patios/{id}` — Remove um pátio  
-
----
-
-## Uso de Query Parameters e Paginação
-
-Você pode usar parâmetros de consulta para filtrar e paginar os resultados:
-
-- Filtrar motos por marca:  
-  `GET /api/motos?marca=Honda`
-- Listar motos com ano superior:  
-  `GET /api/motos/ano?minAno=2018`
-- Paginar resultados de qualquer entidade:  
-  `GET /api/motos?page=2&pageSize=5`
-
-**Exemplo de resposta paginada:**
-```json
-{
-  "items": [
-    {
-      "id": 1,
-      "modelo": "CG 160",
-      "marca": "Honda",
-      "ano": 2020,
-      "clienteId": 3
-    },
-    ...
-  ],
-  "totalCount": 27,
-  "page": 2,
-  "pageSize": 5
-}
-```
+**Códigos de resposta esperados:** `200`, `201 (Created)`, `204`, `400`, `404`, `422`, `500`.
 
 ---
 
-## Documentação da API - Swagger (OpenAPI)
+## 🧾 Exemplos de Requisições
 
-O projeto integra o Swagger para geração automática da documentação da API:
-
-- Acesse `/swagger` após executar a aplicação para visualizar a documentação interativa  
-- Permite testar os endpoints diretamente pelo navegador  
-- Facilita o entendimento dos contratos da API (modelos, parâmetros, respostas)  
-
----
-
-## Exemplos de Uso (Payloads)
-
-### Criar uma moto
+### Criar Moto (POST `/api/motos`)
 **Request**
 ```json
-POST /api/motos
 {
   "modelo": "CG 160",
   "marca": "Honda",
   "ano": 2020,
-  "clienteId": 3
+  "placa": "ABC1D23",
+  "clienteId": 3,
+  "patioId": 1
 }
 ```
-**Response**
+
+**Response (201 Created)**
 ```json
 {
   "id": 10,
   "modelo": "CG 160",
   "marca": "Honda",
   "ano": 2020,
-  "clienteId": 3
+  "placa": "ABC1D23",
+  "clienteId": 3,
+  "patioId": 1,
+  "dataCadastro": "2025-11-04T00:00:00Z"
 }
 ```
 
-### Criar um cliente
-**Request**
-```json
-POST /api/clientes
-{
-  "nome": "Carlos Andrade",
-  "cpf": "12345678901",
-  "email": "carlos@email.com"
-}
-```
-**Response**
+### Exemplo de Listagem Paginada
 ```json
 {
-  "id": 7,
-  "nome": "Carlos Andrade",
-  "cpf": "12345678901",
-  "email": "carlos@email.com"
-}
-```
-
-### Criar um pátio
-**Request**
-```json
-POST /api/patios
-{
-  "nome": "Pátio Central",
-  "endereco": "Av. Brasil, 1000",
-  "capacidade": 200
-}
-```
-**Response**
-```json
-{
-  "id": 2,
-  "nome": "Pátio Central",
-  "endereco": "Av. Brasil, 1000",
-  "capacidade": 200
+  "items": [ /* motos */ ],
+  "totalCount": 27,
+  "page": 2,
+  "pageSize": 5,
+  "totalPages": 6
 }
 ```
 
 ---
 
-## Justificativa Arquitetural
+## 📘 Swagger e Autenticação
 
-O SafeYard foi projetado utilizando o padrão de camadas, separando API, domínio e acesso a dados, o que facilita a escalabilidade, manutenção e testes automatizados. O .NET 9 foi escolhido pela maturidade, robustez e performance no desenvolvimento de APIs modernas. O Entity Framework Core proporciona integração eficiente e segura com o banco Oracle, abstraindo complexidades do acesso a dados e acelerando o desenvolvimento.
+A documentação interativa está disponível em:  
+**`http://localhost:{porta}/swagger`**
 
-A decisão pelo Oracle se baseia na robustez, escalabilidade e recursos avançados oferecidos para aplicações corporativas. O uso do Swagger/OpenAPI reflete a preocupação com a transparência e usabilidade da API, facilitando a adoção e testes por terceiros. A implementação de paginação e filtros nos endpoints está alinhada com as melhores práticas de APIs REST, promovendo eficiência e flexibilidade nas consultas.
+Para fins de **avaliação e testes locais**, use as credenciais padrão:  
+- **Usuário:** `admin`  
+- **Senha:** `admin`
 
----
-
-## Estrutura do Projeto
-
-- **SafeYard.API**: Projeto da API REST (camada de apresentação)  
-- **SafeYard.Data**: Camada de acesso a dados com Entity Framework Core  
-- **SafeYard.Models**: Modelos de dados (Moto, Cliente, Patio)  
+> ⚠️ Em produção, substitua por credenciais seguras.  
 
 ---
 
-## Equipe
+## 🧪 Testes
 
-- Adonay Rodrigues da Rocha  
-- Pedro Henrique Martins Dos Reis  
-- Thamires Ribeiro Cruz  
+Para executar os testes automatizados da solução:
+
+```bash
+dotnet test
+```
+
+Inclui testes unitários de validações e, futuramente, testes de integração entre camadas.
 
 ---
 
-## Como Executar
+## 🛠️ Como Executar Localmente
 
 ### Pré-requisitos
-
-- .NET 9 SDK instalado  
-- Oracle Database disponível e configurado  
-- Visual Studio 2022 (ou VS Code)  
+- .NET 9 SDK  
+- Oracle Database (local, container ou remoto)  
+- `dotnet-ef` (opcional, para migrations)  
 
 ### Passos
-
-1. **Clone o repositório:**
 ```bash
+# 1. Clonar repositório
 git clone https://github.com/AdonayRocha/SafeYard.git
 cd SafeYard
-```
 
-2. **Restaure os pacotes:**
-```bash
+# 2. Restaurar dependências
 dotnet restore
-```
 
-3. **Configure a conexão no `appsettings.json`:**
-```json
+# 3. Configurar a connection string (em appsettings.json)
 {
   "ConnectionStrings": {
-    "OracleConnection": "User Id=SEU_USUARIO;Password=SUA_SENHA;Data Source=oracle.fiap.com.br:1521/ORCL"
+    "OracleConnection": "User Id=SEU_USUARIO;Password=SUA_SENHA;Data Source=oracle.host:1521/ORCL"
   }
 }
+
+# 4. Aplicar migrations
+dotnet ef database update --project ./SafeYard.Data --startup-project ./SafeYard.API
+
+# 5. Executar a API
+dotnet run --project ./SafeYard.API
 ```
 
-4. **Aplique as migrations para criar as tabelas no banco:**
-```bash
-dotnet ef database update --project ./SafeYard
+Abra o navegador em **http://localhost:{porta}/swagger** para acessar a documentação.
+
+> Dica: utilize variáveis de ambiente ou `dotnet user-secrets` para proteger credenciais sensíveis.
+
+---
+
+## 🧱 Estrutura Esperada do Repositório
+
+```
+SafeYard/
+├── SafeYard.sln
+├── src/
+│   ├── SafeYard.API/
+│   ├── SafeYard.Data/
+│   ├── SafeYard.Models/      # ou Domain
+│   └── SafeYard.Application/ # opcional
+└── tests/
+    ├── SafeYard.UnitTests/
+    └── SafeYard.IntegrationTests/
 ```
 
-5. **Execute a aplicação:**
-```bash
-dotnet run --project ./SafeYard
-```
+---
 
-6. **Acesse a documentação interativa:**
-```
-http://localhost:5000/swagger
-```
+## 👥 Equipe
+
+- **Adonay Rodrigues da Rocha**  
+- **Pedro Henrique Martins dos Reis**  
+- **Thamires Ribeiro Cruz**
+
+---
+
+## ✅ Observações Finais para Avaliação
+
+- As entidades **Moto**, **Cliente** e **Pátio** devem possuir **propriedades de navegação** e **chaves estrangeiras configuradas**.  
+- Verifique se há **migrations válidas** e que o projeto **compila corretamente**.  
+- O README contém todas as instruções para execução e testes, inclusive as credenciais de avaliação (`admin` / `admin`).
+- Via SWAGGER a credencial é (`admin`)
