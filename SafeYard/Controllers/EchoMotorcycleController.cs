@@ -1,37 +1,53 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using SafeYard.Data;
 using SafeYard.Models;
+using SafeYard.Models.Common;
+using SafeYard.Services;
+using SafeYard.Services.Interfaces;
 
 namespace SafeYard.Controllers
 {
-    [ApiController]
     [Route("api/echo-motorcycles")]
-    public class EchoMotorcycleController : ControllerBase
+    [ApiController]
+    public class EchoMotorcyclesController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private const int MaxPageSize = 600;
 
-        public EchoMotorcycleController(ApplicationDbContext context)
+        private readonly IEchoMotorcycleService _service;
+
+        [ActivatorUtilitiesConstructor]
+        public EchoMotorcyclesController(IEchoMotorcycleService service)
         {
-            _context = context;
+            _service = service;
         }
 
-        /// <summary>
-        /// Retorna os registros de EchoMotorcycle (últimos 100 por data/hora).
-        /// </summary>
-        [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<EchoMotorcycle>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public async Task<ActionResult<IEnumerable<EchoMotorcycle>>> Get()
+        // Construtor alternativo para cenários de teste com DbContext
+        public EchoMotorcyclesController(ApplicationDbContext context)
         {
-            var items = await _context.TB_ECHO_MOTORCYCLE
-                .AsNoTracking()
-                .OrderByDescending(e => e.Data)
-                .ThenByDescending(e => e.Hora)
-                .Take(100)
-                .ToListAsync();
+            _service = new EchoMotorcycleService(context);
+        }
 
-            return items.Count > 0 ? Ok(items) : NoContent();
+        /// <summary>Retorna registros de EchoMotorcycle com paginação (máx. 600 por chamada).</summary>
+        /// <param name="page">Número da página (1..n)</param>
+        /// <param name="pageSize">Tamanho da página (1..600)</param>
+        [HttpGet(Name = "GetEchoMotorcycles")]
+        [ProducesResponseType(typeof(PagedResult<EchoMotorcycle>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<ActionResult<PagedResult<EchoMotorcycle>>> Get([FromQuery] int? page, [FromQuery] int? pageSize)
+        {
+            var p = page.GetValueOrDefault(1);
+            var s = pageSize.GetValueOrDefault(MaxPageSize);
+
+            if (p < 1) p = 1;
+            if (s < 1) s = 1;
+            if (s > MaxPageSize) s = MaxPageSize;
+
+            var (items, total) = await _service.GetAsync(p, s);
+            if (total == 0) return NoContent();
+
+            var result = new PagedResult<EchoMotorcycle>(items, total, p, s);
+            return Ok(result);
         }
     }
 }

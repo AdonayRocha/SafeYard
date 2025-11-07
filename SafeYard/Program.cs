@@ -79,6 +79,7 @@ builder.Services.AddScoped<MotorcycleMlPredictionService>();
 builder.Services.AddScoped<IMotoService, MotoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IPatioService, PatioService>();
+builder.Services.AddScoped<SafeYard.Services.Interfaces.IEchoMotorcycleService, SafeYard.Services.EchoMotorcycleService>();
 
 var app = builder.Build();
 
